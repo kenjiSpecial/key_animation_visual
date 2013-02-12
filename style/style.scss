@@ -8,7 +8,30 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  font-family: 'Ubuntu', sans-serif;;
 }
+
+p{
+  position: absolute;
+  font-size: 1em;
+  line-height: 1.5em;
+
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  padding: 6px 12px;
+}
+
+p#sentence01{
+  top: 30px;
+  left: 30px;
+  text-align: right;
+  span{
+    font-size: .8em;
+    line-height: 2em;
+  }
+}
+
+
 canvas{
   position: absolute;
   top: 0;

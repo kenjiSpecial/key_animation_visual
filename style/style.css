@@ -70,9 +70,32 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  font-family: "Ubuntu", sans-serif;
 }
 
-/* line 12, style.scss */
+/* line 14, style.scss */
+p {
+  position: absolute;
+  font-size: 1em;
+  line-height: 1.5em;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 6px 12px;
+}
+
+/* line 24, style.scss */
+p#sentence01 {
+  top: 30px;
+  left: 30px;
+  text-align: right;
+}
+/* line 28, style.scss */
+p#sentence01 span {
+  font-size: .8em;
+  line-height: 2em;
+}
+
+/* line 35, style.scss */
 canvas {
   position: absolute;
   top: 0;

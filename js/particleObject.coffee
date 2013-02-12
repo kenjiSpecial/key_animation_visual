@@ -152,8 +152,11 @@ class this.ParticleObject
       this.shapeID = 3
       this.openingStatus  = true
 
+    console.log("this.shapeID: " + this.shapeID);
+
 #    saving the temp original particle position for creating the animation
     if this.shapeID is 1 && this.waveStatus
+      this.openingStatus = true
       this.waveStatus = false
 
       this.tempParticle01 = []
@@ -186,27 +189,51 @@ class this.ParticleObject
       this.lastTime = new Date().getTime()
 
     if this.shapeID is 3  && this.openingStatus
-      this.openingStatus = false;
+      this.openingStatus = false
+      this.waveStatus = true
 
-      AOEE = 1200
+      console.log("this.shapeID " + this.shapeID);
       this.tempParticle01 = []
       this.futureParticle01 = []
 
-#      this.particles1[this.DETAIL / 2].force.y += 500
+      this.tempParticle02 = []
+      this.futureParticle02 = []
 
-      for particle, i in this.particles1
-        pt = {x: particle.original.x, y: particle.original.y}
-        this.tempParticle01.push(pt)
+#      --------------------------
+#      update the particle status
+#      --------------------------
 
-        futurePt = {x: particle.original.x, y: 0}
+
+      for i in [0..this.DETAIL-1]
+#        forceRandom = Math.random() * 100 - 50
+        theta = i / this.DETAIL * Math.PI * 2
+        rRan = 80 * Math.random()
+
+        futurePt = {x: this.Width/ 2 + (this.rad + rRan) * Math.cos(theta), y: this.Height/ 2 + (this.rad + rRan) * Math.sin(theta)}
+#        this.particles1.push(particle)
         this.futureParticle01.push(futurePt)
 
-        distance = DistanceBetween(this.mp, particle)
-        distance = DistanceBetween( this.mp, {x: particle.original.x, y:particle.original.y})
-        particle.force.y += ( 1 - (distance / AOEE)) * 90 * (0.7 + 0.3 * Math.random());
+        pt = {x: this.particles1[i].original.x, y: this.particles1[i].original.y}
+        this.tempParticle01.push(pt)
 
+
+
+      for i in [0..this.DETAIL-1]
+#        forceRandom = Math.random() * 100 - 50
+        theta = i / this.DETAIL * Math.PI * 2
+        rRan = 80 * Math.random()
+
+        futurePt = {x: this.Width/ 2 + (this.rad + rRan) * Math.cos(theta), y: this.Height/ 2 + (this.rad + rRan) * Math.sin(theta)}
+        this.futureParticle02.push(futurePt)
+
+        pt = {x: this.particles2[i].original.x, y: this.particles2[i].original.y}
+        this.tempParticle02.push(pt)
+
+      this.twitchTime = 0
+      this.formChangeTImer = 0
       this.transferTimer = 0
-      this.transferDuration = 1.2
+
+      this.TWITCH_INTERVAL = .8
 
 
   update: ->
@@ -217,7 +244,8 @@ class this.ParticleObject
       when 0 then this.slime(dt) #calculating the particle and painting it
       when 1 then this.slimeToWave(dt) #calculating the particle and painting it
       when 2 then this.wave(dt) #calculating the particle and painting it
-      when 3 then this.waveToOpen(dt)
+      when 3 then this.waveToSlime(dt)
+
 
     this.lastTime = curTime
 
@@ -507,7 +535,7 @@ class this.ParticleObject
       this.context2.closePath()
       this.context2.fill()
 
-    else if rate < 5 && rate > 1 # rate is 1 - 5
+    else if rate < 2 && rate > 1 # rate is 1 - 5
       this.context1.fillStyle = "rgba(30, 30, 30, 1)";
       this.context1.beginPath();
 
@@ -728,68 +756,133 @@ class this.ParticleObject
     this.context2.closePath()
     this.context2.fill()
 
-  waveToOpen: (dt)->
+  waveToSlime: (dt)->
+    console.log("waveToSlime")
     this.transferTimer += dt
     rate = this.transferTimer / this.transferDuration
+    console.log("rate: "+ rate)
+
+
 
     if rate < 1
-      this.context1.fillStyle = "rgb(30, 30, 30)";
+      this.context1.fillStyle = "rgba(30, 30, 30, #{.3 * rate})";
       this.context1.beginPath();
-      this.context1.moveTo(this.particles1[1].x, this.particles1[1].y)
 
       for particle, i in this.particles1
+        particle.original.x = TweenCalculation(rate, this.tempParticle01[i].x, this.futureParticle01[i].x)
         particle.original.y = TweenCalculation(rate, this.tempParticle01[i].y, this.futureParticle01[i].y)
+        if i is 0
+          previous = this.particles1[this.DETAIL - 1]
+        else
+          previous = this.particles1[i - 1]
 
-        force = {y:0}
-        force.y += this.DENSITY * (particle.y - particle.original.y)
+        force = {x:0, y:0}
+        force.y += this.DENSITY * (particle.y - particle.original.y) * 40
+        force.x += this.DENSITY * (particle.x - particle.original.x) * 40
 
         particle.velocity.y += -(force.y / particle.mass) + particle.force.y
+        particle.velocity.x += -(force.x / particle.mass) + particle.force.x
+
+        particle.velocity.x /= this.FRICTION
+        particle.force.x /= this.FRICTION
+        particle.x += particle.velocity.x
 
         particle.velocity.y /= this.FRICTION
         particle.force.y /= this.FRICTION
         particle.y += particle.velocity.y
 
-        previous = this.particles1[i - 1]
-        next = this.particles1[i + 1]
-        if previous && next
+        if i is 0
+          lastPt = {x: (particle.x + previous.x) / 2, y: (particle.y + previous.y) / 2}
+          this.context1.moveTo( lastPt.x, lastPt.y)
+        else
           this.context1.quadraticCurveTo( previous.x, previous.y, (previous.x + particle.x)/ 2, (previous.y + particle.y)/ 2)
 
-      this.context1.lineTo( this.particles1[this.DETAIL - 1].x, this.particles1[this.DETAIL - 1].y)
-      this.context1.lineTo( this.particles1[this.DETAIL - 1].x, this.Height)
-      this.context1.lineTo(this.particles1[0].x, this.Height)
-
+      this.context1.quadraticCurveTo( this.particles1[this.DETAIL - 1].x, this.particles1[this.DETAIL - 1].y, lastPt.x, lastPt.y)
       this.context1.closePath()
       this.context1.fill()
 
-    else if rate > 1 && rate < 3
-      this.context1.fillStyle = "rgba(30, 30, 30, #{(3 - rate) * (3 - rate) / 4})";
+      #      ------------
+
+      this.context1.fillStyle = "rgba(30, 30, 30, #{ 1 - rate })";
       this.context1.beginPath();
       this.context1.moveTo(this.particles1[1].x, this.particles1[1].y)
 
       for particle, i in this.particles1
-        force = {y:0}
-        force.y += this.DENSITY * (particle.y - particle.original.y)
-
-        particle.velocity.y += -(force.y / particle.mass) + particle.force.y
-
-        particle.velocity.y /= this.FRICTION
-        particle.force.y /= this.FRICTION
-        particle.y += particle.velocity.y
-
-
         previous = this.particles1[i - 1]
         next = this.particles1[i + 1]
-
         if previous && next
           this.context1.quadraticCurveTo( previous.x, previous.y, (previous.x + particle.x)/ 2, (previous.y + particle.y)/ 2)
+
       this.context1.lineTo( this.particles1[this.DETAIL - 1].x, this.particles1[this.DETAIL - 1].y)
       this.context1.lineTo( this.particles1[this.DETAIL - 1].x, this.Height)
       this.context1.lineTo(this.particles1[0].x, this.Height)
 
       this.context1.closePath()
       this.context1.fill()
+
+      #     -----------------
+      #     -----------------
+
+      this.context2.fillStyle = "rgba(120, 120, 120, #{.3 * rate})";
+      this.context2.beginPath()
+      for particle, i in this.particles2
+        particle.original.x = TweenCalculation(rate, this.tempParticle02[i].x, this.futureParticle02[i].x) #this.futureParticle02[i].x * rate + this.tempParticle02[i].x * (1 - rate)
+        particle.original.y = TweenCalculation(rate, this.tempParticle02[i].y, this.futureParticle02[i].y) #this.futureParticle02[i].y * rate + this.tempParticle02[i].y * (1 - rate)
+
+        if i is 0
+          previous = this.particles2[this.DETAIL - 1]
+        else
+          previous = this.particles2[i - 1]
+
+        force = {x:0, y:0}
+
+        force.y += this.DENSITY * (particle.y - particle.original.y) * 40
+        force.x += this.DENSITY * (particle.x - particle.original.x) * 40
+
+        particle.velocity.y += -(force.y / particle.mass) + particle.force.y
+        particle.velocity.x += -(force.x / particle.mass) + particle.force.x
+
+        particle.velocity.x /= this.FRICTION
+        particle.force.x /= this.FRICTION
+        particle.x += particle.velocity.x
+
+        particle.velocity.y /= this.FRICTION
+        particle.force.y /= this.FRICTION
+        particle.y += particle.velocity.y
+
+        if i is 0
+          lastPt = {x: (particle.x + previous.x) / 2, y: (particle.y + previous.y) / 2}
+          this.context2.moveTo( lastPt.x, lastPt.y)
+        else
+          this.context2.quadraticCurveTo( previous.x, previous.y, (previous.x + particle.x)/ 2, (previous.y + particle.y)/ 2)
+
+      this.context2.quadraticCurveTo( this.particles2[this.DETAIL - 1].x, this.particles2[this.DETAIL - 1].y, lastPt.x, lastPt.y)
+      this.context2.closePath()
+      this.context2.fill()
+
+      #     -----------------
+
+      this.context2.fillStyle = "rgba(120, 120, 120, #{ 1 - rate })";
+      this.context2.beginPath();
+      this.context2.moveTo(this.particles1[1].x, this.particles1[1].y)
+
+      for particle, i in this.particles2
+        previous = this.particles2[i - 1]
+        next = this.particles2[i + 1]
+        if previous && next
+          this.context2.quadraticCurveTo( previous.x, previous.y, (previous.x + particle.x)/ 2, (previous.y + particle.y)/ 2)
+
+      this.context2.lineTo( this.particles2[this.DETAIL - 1].x, this.particles2[this.DETAIL - 1].y)
+      this.context2.lineTo( this.particles2[this.DETAIL - 1].x, this.Height)
+      this.context2.lineTo(this.particles2[0].x, this.Height)
+
+      this.context2.closePath()
+      this.context2.fill()
     else
-      this.particleObjectAnimation = false
+      this.slime(0)
+      this.shapeID = 0
+
+#      this.particleObjectAnimation = false
 
   resize: (event)->
     prevWid = this.Width
@@ -812,9 +905,6 @@ class this.ParticleObject
         particle.original.y += dy
 
     else
-#      console.log(this.Width)
-
-
 #      for particle,i in this.particles1
       for i in [0..this.DETAIL-1]
         xPos = this.Width / (this.DETAIL - 5) * (i - 2)
@@ -832,4 +922,3 @@ class this.ParticleObject
 
         this.particles2[i].original.x = xPos
         this.particles2[i].original.y = 2 / 5 * this.Height
-

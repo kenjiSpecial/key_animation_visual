@@ -174,7 +174,7 @@
     };
 
     ParticleObject.prototype.transfer = function() {
-      var AOEE, distance, futurePt, i, particle, pt, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      var futurePt, i, particle, pt, rRan, theta, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2, _ref3;
       if (this.shapeID === 0) {
         this.shapeID = 1;
         this.waveStatus = true;
@@ -183,7 +183,9 @@
         this.shapeID = 3;
         this.openingStatus = true;
       }
+      console.log("this.shapeID: " + this.shapeID);
       if (this.shapeID === 1 && this.waveStatus) {
+        this.openingStatus = true;
         this.waveStatus = false;
         this.tempParticle01 = [];
         this.futureParticle01 = [];
@@ -225,31 +227,44 @@
       }
       if (this.shapeID === 3 && this.openingStatus) {
         this.openingStatus = false;
-        AOEE = 1200;
+        this.waveStatus = true;
+        console.log("this.shapeID " + this.shapeID);
         this.tempParticle01 = [];
         this.futureParticle01 = [];
-        _ref2 = this.particles1;
-        for (i = _k = 0, _len2 = _ref2.length; _k < _len2; i = ++_k) {
-          particle = _ref2[i];
-          pt = {
-            x: particle.original.x,
-            y: particle.original.y
-          };
-          this.tempParticle01.push(pt);
+        this.tempParticle02 = [];
+        this.futureParticle02 = [];
+        for (i = _k = 0, _ref2 = this.DETAIL - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
+          theta = i / this.DETAIL * Math.PI * 2;
+          rRan = 80 * Math.random();
           futurePt = {
-            x: particle.original.x,
-            y: 0
+            x: this.Width / 2 + (this.rad + rRan) * Math.cos(theta),
+            y: this.Height / 2 + (this.rad + rRan) * Math.sin(theta)
           };
           this.futureParticle01.push(futurePt);
-          distance = DistanceBetween(this.mp, particle);
-          distance = DistanceBetween(this.mp, {
-            x: particle.original.x,
-            y: particle.original.y
-          });
-          particle.force.y += (1 - (distance / AOEE)) * 90 * (0.7 + 0.3 * Math.random());
+          pt = {
+            x: this.particles1[i].original.x,
+            y: this.particles1[i].original.y
+          };
+          this.tempParticle01.push(pt);
         }
+        for (i = _l = 0, _ref3 = this.DETAIL - 1; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
+          theta = i / this.DETAIL * Math.PI * 2;
+          rRan = 80 * Math.random();
+          futurePt = {
+            x: this.Width / 2 + (this.rad + rRan) * Math.cos(theta),
+            y: this.Height / 2 + (this.rad + rRan) * Math.sin(theta)
+          };
+          this.futureParticle02.push(futurePt);
+          pt = {
+            x: this.particles2[i].original.x,
+            y: this.particles2[i].original.y
+          };
+          this.tempParticle02.push(pt);
+        }
+        this.twitchTime = 0;
+        this.formChangeTImer = 0;
         this.transferTimer = 0;
-        return this.transferDuration = 1.2;
+        return this.TWITCH_INTERVAL = .8;
       }
     };
 
@@ -268,7 +283,7 @@
           this.wave(dt);
           break;
         case 3:
-          this.waveToOpen(dt);
+          this.waveToSlime(dt);
       }
       return this.lastTime = curTime;
     };
@@ -547,7 +562,7 @@
         this.context2.lineTo(this.particles2[0].x, this.Height);
         this.context2.closePath();
         return this.context2.fill();
-      } else if (rate < 5 && rate > 1) {
+      } else if (rate < 3 && rate > 1) {
         this.context1.fillStyle = "rgba(30, 30, 30, 1)";
         this.context1.beginPath();
         this.context1.moveTo(this.particles1[1].x, this.particles1[1].y);
@@ -747,52 +762,58 @@
       return this.context2.fill();
     };
 
-    ParticleObject.prototype.waveToOpen = function(dt) {
-      var force, i, next, particle, previous, rate, _i, _j, _len, _len1, _ref, _ref1;
+    ParticleObject.prototype.waveToSlime = function(dt) {
+      var force, i, lastPt, next, particle, previous, rate, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
+      console.log("waveToSlime");
       this.transferTimer += dt;
       rate = this.transferTimer / this.transferDuration;
+      console.log("rate: " + rate);
       if (rate < 1) {
-        this.context1.fillStyle = "rgb(30, 30, 30)";
+        this.context1.fillStyle = "rgba(30, 30, 30, " + (.3 * rate) + ")";
         this.context1.beginPath();
-        this.context1.moveTo(this.particles1[1].x, this.particles1[1].y);
         _ref = this.particles1;
         for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
           particle = _ref[i];
+          particle.original.x = TweenCalculation(rate, this.tempParticle01[i].x, this.futureParticle01[i].x);
           particle.original.y = TweenCalculation(rate, this.tempParticle01[i].y, this.futureParticle01[i].y);
+          if (i === 0) {
+            previous = this.particles1[this.DETAIL - 1];
+          } else {
+            previous = this.particles1[i - 1];
+          }
           force = {
+            x: 0,
             y: 0
           };
-          force.y += this.DENSITY * (particle.y - particle.original.y);
+          force.y += this.DENSITY * (particle.y - particle.original.y) * 40;
+          force.x += this.DENSITY * (particle.x - particle.original.x) * 40;
           particle.velocity.y += -(force.y / particle.mass) + particle.force.y;
+          particle.velocity.x += -(force.x / particle.mass) + particle.force.x;
+          particle.velocity.x /= this.FRICTION;
+          particle.force.x /= this.FRICTION;
+          particle.x += particle.velocity.x;
           particle.velocity.y /= this.FRICTION;
           particle.force.y /= this.FRICTION;
           particle.y += particle.velocity.y;
-          previous = this.particles1[i - 1];
-          next = this.particles1[i + 1];
-          if (previous && next) {
+          if (i === 0) {
+            lastPt = {
+              x: (particle.x + previous.x) / 2,
+              y: (particle.y + previous.y) / 2
+            };
+            this.context1.moveTo(lastPt.x, lastPt.y);
+          } else {
             this.context1.quadraticCurveTo(previous.x, previous.y, (previous.x + particle.x) / 2, (previous.y + particle.y) / 2);
           }
         }
-        this.context1.lineTo(this.particles1[this.DETAIL - 1].x, this.particles1[this.DETAIL - 1].y);
-        this.context1.lineTo(this.particles1[this.DETAIL - 1].x, this.Height);
-        this.context1.lineTo(this.particles1[0].x, this.Height);
+        this.context1.quadraticCurveTo(this.particles1[this.DETAIL - 1].x, this.particles1[this.DETAIL - 1].y, lastPt.x, lastPt.y);
         this.context1.closePath();
-        return this.context1.fill();
-      } else if (rate > 1 && rate < 3) {
-        this.context1.fillStyle = "rgba(30, 30, 30, " + ((3 - rate) * (3 - rate) / 4) + ")";
+        this.context1.fill();
+        this.context1.fillStyle = "rgba(30, 30, 30, " + (1 - rate) + ")";
         this.context1.beginPath();
         this.context1.moveTo(this.particles1[1].x, this.particles1[1].y);
         _ref1 = this.particles1;
         for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
           particle = _ref1[i];
-          force = {
-            y: 0
-          };
-          force.y += this.DENSITY * (particle.y - particle.original.y);
-          particle.velocity.y += -(force.y / particle.mass) + particle.force.y;
-          particle.velocity.y /= this.FRICTION;
-          particle.force.y /= this.FRICTION;
-          particle.y += particle.velocity.y;
           previous = this.particles1[i - 1];
           next = this.particles1[i + 1];
           if (previous && next) {
@@ -803,9 +824,66 @@
         this.context1.lineTo(this.particles1[this.DETAIL - 1].x, this.Height);
         this.context1.lineTo(this.particles1[0].x, this.Height);
         this.context1.closePath();
-        return this.context1.fill();
+        this.context1.fill();
+        this.context2.fillStyle = "rgba(120, 120, 120, " + (.3 * rate) + ")";
+        this.context2.beginPath();
+        _ref2 = this.particles2;
+        for (i = _k = 0, _len2 = _ref2.length; _k < _len2; i = ++_k) {
+          particle = _ref2[i];
+          particle.original.x = TweenCalculation(rate, this.tempParticle02[i].x, this.futureParticle02[i].x);
+          particle.original.y = TweenCalculation(rate, this.tempParticle02[i].y, this.futureParticle02[i].y);
+          if (i === 0) {
+            previous = this.particles2[this.DETAIL - 1];
+          } else {
+            previous = this.particles2[i - 1];
+          }
+          force = {
+            x: 0,
+            y: 0
+          };
+          force.y += this.DENSITY * (particle.y - particle.original.y) * 40;
+          force.x += this.DENSITY * (particle.x - particle.original.x) * 40;
+          particle.velocity.y += -(force.y / particle.mass) + particle.force.y;
+          particle.velocity.x += -(force.x / particle.mass) + particle.force.x;
+          particle.velocity.x /= this.FRICTION;
+          particle.force.x /= this.FRICTION;
+          particle.x += particle.velocity.x;
+          particle.velocity.y /= this.FRICTION;
+          particle.force.y /= this.FRICTION;
+          particle.y += particle.velocity.y;
+          if (i === 0) {
+            lastPt = {
+              x: (particle.x + previous.x) / 2,
+              y: (particle.y + previous.y) / 2
+            };
+            this.context2.moveTo(lastPt.x, lastPt.y);
+          } else {
+            this.context2.quadraticCurveTo(previous.x, previous.y, (previous.x + particle.x) / 2, (previous.y + particle.y) / 2);
+          }
+        }
+        this.context2.quadraticCurveTo(this.particles2[this.DETAIL - 1].x, this.particles2[this.DETAIL - 1].y, lastPt.x, lastPt.y);
+        this.context2.closePath();
+        this.context2.fill();
+        this.context2.fillStyle = "rgba(120, 120, 120, " + (1 - rate) + ")";
+        this.context2.beginPath();
+        this.context2.moveTo(this.particles1[1].x, this.particles1[1].y);
+        _ref3 = this.particles2;
+        for (i = _l = 0, _len3 = _ref3.length; _l < _len3; i = ++_l) {
+          particle = _ref3[i];
+          previous = this.particles2[i - 1];
+          next = this.particles2[i + 1];
+          if (previous && next) {
+            this.context2.quadraticCurveTo(previous.x, previous.y, (previous.x + particle.x) / 2, (previous.y + particle.y) / 2);
+          }
+        }
+        this.context2.lineTo(this.particles2[this.DETAIL - 1].x, this.particles2[this.DETAIL - 1].y);
+        this.context2.lineTo(this.particles2[this.DETAIL - 1].x, this.Height);
+        this.context2.lineTo(this.particles2[0].x, this.Height);
+        this.context2.closePath();
+        return this.context2.fill();
       } else {
-        return this.particleObjectAnimation = false;
+        this.slime(0);
+        return this.shapeID = 0;
       }
     };
 
