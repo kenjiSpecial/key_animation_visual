@@ -1,0 +1,1 @@
+This code is key animation visual for my web site ( http://kenji-special.com/)
